@@ -327,6 +327,185 @@
             font-size: 0.9rem;
         }
 
+        /* Estilos del Chat */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+
+        .chat-message {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .chat-message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .message-content {
+            background: white;
+            padding: 12px 16px;
+            border-radius: 12px;
+            max-width: 70%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .chat-message.user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .message-content strong {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .chat-message.user .message-content strong {
+            color: rgba(255,255,255,0.9);
+        }
+
+        .message-content p {
+            margin: 8px 0;
+            line-height: 1.5;
+        }
+
+        .message-content ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .message-content li {
+            margin: 5px 0;
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        #chatInput {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            resize: none;
+            transition: border-color 0.3s;
+        }
+
+        #chatInput:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .send-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .send-btn:hover:not(:disabled) {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+        }
+
+        .send-btn:disabled {
+            background: #ddd;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .send-icon {
+            font-size: 1.2rem;
+        }
+
+        .chat-info {
+            text-align: center;
+            margin-top: 10px;
+            color: #999;
+        }
+
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 12px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #999;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-10px);
+            }
+        }
+
         @media (max-width: 768px) {
             .tools-grid {
                 grid-template-columns: 1fr;
@@ -338,6 +517,10 @@
             
             .logo {
                 font-size: 2.5rem;
+            }
+
+            .message-content {
+                max-width: 85%;
             }
         }
     </style>
@@ -372,6 +555,12 @@
                 <div class="tool-icon">📊</div>
                 <div class="tool-title">Unir Excel</div>
                 <div class="tool-description">Une varias hojas de cálculo Excel (.xlsx) en un solo libro</div>
+            </div>
+
+            <div class="tool-card" onclick="openModal('chat')">
+                <div class="tool-icon">💬</div>
+                <div class="tool-title">Chat con IA</div>
+                <div class="tool-description">Chatea con Claude AI para resolver dudas, generar contenido y más</div>
             </div>
         </div>
     </div>
@@ -460,6 +649,49 @@
         </div>
     </div>
 
+    <!-- Modal Chat con IA -->
+    <div class="modal" id="chatModal">
+        <div class="modal-content" style="max-width: 900px; height: 85vh; display: flex; flex-direction: column;">
+            <button class="close-btn" onclick="closeModal('chat')">×</button>
+            <h2 class="modal-title">💬 Chat con Claude AI</h2>
+            
+            <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="chat-message bot">
+                        <div class="message-avatar">🤖</div>
+                        <div class="message-content">
+                            <strong>Claude AI</strong>
+                            <p>¡Hola! Soy Claude, tu asistente de IA. Puedo ayudarte con:</p>
+                            <ul>
+                                <li>📝 Redactar textos y documentos</li>
+                                <li>💡 Responder preguntas</li>
+                                <li>🔍 Analizar información</li>
+                                <li>💻 Ayudarte con código</li>
+                                <li>🎨 Ideas creativas</li>
+                            </ul>
+                            <p>¿En qué puedo ayudarte hoy?</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chat-input-container">
+                    <textarea 
+                        id="chatInput" 
+                        placeholder="Escribe tu mensaje aquí... (Presiona Enter para enviar)"
+                        rows="2"
+                    ></textarea>
+                    <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                        <span class="send-icon">▶</span>
+                    </button>
+                </div>
+                
+                <div class="chat-info">
+                    <small>⚠️ Nota: Esta es una demo simulada. Para chatear con Claude real, necesitas una API key de Anthropic.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="footer">
         Hecho con ❤️ | Todas las operaciones se realizan en tu navegador - tus archivos permanecen privados
     </div>
@@ -515,6 +747,8 @@
                 wordModal.classList.add('active');
             } else if (type === 'excel') {
                 excelModal.classList.add('active');
+            } else if (type === 'chat') {
+                chatModal.classList.add('active');
             }
         }
 
@@ -539,6 +773,8 @@
                 excelFiles = [];
                 updateFileList('excel');
                 hideStatus('excel');
+            } else if (type === 'chat') {
+                chatModal.classList.remove('active');
             }
         }
 
@@ -554,6 +790,9 @@
         });
         excelModal.addEventListener('click', (e) => {
             if (e.target === excelModal) closeModal('excel');
+        });
+        chatModal.addEventListener('click', (e) => {
+            if (e.target === chatModal) closeModal('chat');
         });
 
         // ========== UNIR PDFs ==========
@@ -840,6 +1079,147 @@
             } finally {
                 excelBtn.disabled = false;
             }
+        });
+
+        // ========== CHAT CON IA ==========
+
+        const chatModal = document.getElementById('chatModal');
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendBtn');
+
+        // Respuestas inteligentes simuladas
+        const responses = {
+            saludos: [
+                "¡Hola! ¿Cómo puedo ayudarte hoy? 😊",
+                "¡Hola! Estoy aquí para ayudarte. ¿Qué necesitas?",
+                "¡Hey! ¿En qué puedo asistirte?"
+            ],
+            ayuda: [
+                "Puedo ayudarte con muchas cosas: redactar textos, responder preguntas, generar ideas, ayudarte con código, y más. ¿Qué necesitas específicamente?",
+                "Estoy aquí para ayudarte con tareas de escritura, análisis, programación, ideas creativas y mucho más. ¿Qué te gustaría hacer?"
+            ],
+            redactar: [
+                "¡Claro! Puedo ayudarte a redactar. ¿Qué tipo de texto necesitas? (email, carta, artículo, etc.)",
+                "Con gusto te ayudo a escribir. Cuéntame más sobre qué necesitas redactar."
+            ],
+            codigo: [
+                "¡Perfecto! Puedo ayudarte con código. ¿Qué lenguaje estás usando o qué necesitas programar?",
+                "Estoy listo para ayudarte con programación. ¿Qué necesitas crear o resolver?"
+            ],
+            herramientas: [
+                "¡Esta página tiene varias herramientas útiles!\n\n📑 Unir PDFs - Combina varios PDFs\n🖼️ Imágenes a PDF - Convierte imágenes\n📝 Unir Word - Combina documentos\n📊 Unir Excel - Une hojas de cálculo\n\n¿Cuál te gustaría usar?",
+                "Tenemos 4 herramientas principales aquí: unir PDFs, convertir imágenes a PDF, unir documentos Word y unir archivos Excel. ¿Necesitas ayuda con alguna?"
+            ],
+            despedida: [
+                "¡Hasta luego! Si necesitas algo más, aquí estaré. 👋",
+                "¡Adiós! Fue un placer ayudarte. 😊",
+                "¡Nos vemos! Vuelve cuando necesites ayuda. 🌟"
+            ],
+            default: [
+                "Interesante pregunta. Como esta es una demo, te recomendaría usar Claude real para respuestas más precisas. ¿Hay algo más sobre las herramientas de esta página en lo que pueda ayudarte?",
+                "Entiendo tu pregunta. Para respuestas más detalladas, necesitarías conectarte con la API de Claude. ¿Te gustaría saber más sobre las funciones de esta página?",
+                "Esa es una buena pregunta. Esta es una versión demo, pero puedo ayudarte con información sobre las herramientas disponibles aquí. ¿Qué te gustaría saber?"
+            ]
+        };
+
+        // Detectar intención del mensaje
+        function detectIntent(message) {
+            const msg = message.toLowerCase();
+            
+            if (msg.match(/hola|hey|buenos|saludos|hi|hello/)) return 'saludos';
+            if (msg.match(/ayuda|ayudar|qué puedes|que puedes|funciones/)) return 'ayuda';
+            if (msg.match(/redactar|escribir|texto|carta|email|artículo/)) return 'redactar';
+            if (msg.match(/código|codigo|programar|script|javascript|python|html/)) return 'codigo';
+            if (msg.match(/herramienta|función|funcion|pdf|word|excel|imagen/)) return 'herramientas';
+            if (msg.match(/adiós|adios|chao|hasta luego|bye|gracias y|nos vemos/)) return 'despedida';
+            
+            return 'default';
+        }
+
+        // Obtener respuesta aleatoria según intención
+        function getResponse(intent) {
+            const responseArray = responses[intent] || responses.default;
+            return responseArray[Math.floor(Math.random() * responseArray.length)];
+        }
+
+        // Agregar mensaje al chat
+        function addMessage(content, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${isUser ? 'user' : 'bot'}`;
+            
+            messageDiv.innerHTML = `
+                <div class="message-avatar">${isUser ? '👤' : '🤖'}</div>
+                <div class="message-content">
+                    <strong>${isUser ? 'Tú' : 'Claude AI'}</strong>
+                    <p>${content.replace(/\n/g, '<br>')}</p>
+                </div>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Mostrar indicador de escritura
+        function showTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'chat-message bot';
+            typingDiv.id = 'typingIndicator';
+            typingDiv.innerHTML = `
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                    <div class="typing-indicator">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                </div>
+            `;
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const typing = document.getElementById('typingIndicator');
+            if (typing) typing.remove();
+        }
+
+        // Enviar mensaje
+        async function sendMessage() {
+            const message = chatInput.value.trim();
+            if (!message) return;
+
+            // Agregar mensaje del usuario
+            addMessage(message, true);
+            chatInput.value = '';
+            sendBtn.disabled = true;
+
+            // Mostrar indicador de escritura
+            showTypingIndicator();
+
+            // Simular delay de respuesta
+            setTimeout(() => {
+                removeTypingIndicator();
+                
+                const intent = detectIntent(message);
+                const response = getResponse(intent);
+                
+                addMessage(response, false);
+                sendBtn.disabled = false;
+                chatInput.focus();
+            }, 1000 + Math.random() * 1000);
+        }
+
+        // Event listeners del chat
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        chatInput.addEventListener('input', () => {
+            sendBtn.disabled = !chatInput.value.trim();
         });
 
         // ========== FUNCIONES AUXILIARES ==========
