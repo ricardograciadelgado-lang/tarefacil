@@ -1141,15 +1141,17 @@
         const apiKeyInput = document.getElementById('apiKeyInput');
 
         let conversationHistory = [];
-        let HF_API_KEY = null;
+        let HF_API_KEY = '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'; // Token pre-configurado
 
         // Cargar API key guardada
         window.addEventListener('load', () => {
-            const savedKey = localStorage.getItem('hf_api_key');
-            if (savedKey) {
-                HF_API_KEY = savedKey;
-                apiKeyInput.value = savedKey;
+            // Ya tenemos el token, así que habilitamos el chat automáticamente
+            if (HF_API_KEY) {
                 enableChat();
+                // Ocultar la configuración de API
+                if (apiConfig) {
+                    apiConfig.style.display = 'none';
+                }
             }
         });
 
@@ -1173,8 +1175,11 @@
         }
 
         function enableChat() {
-            apiConfig.style.display = 'none';
+            if (apiConfig) {
+                apiConfig.style.display = 'none';
+            }
             chatInput.disabled = false;
+            chatInput.placeholder = 'Escribe tu mensaje aquí... (Presiona Enter para enviar)';
             chatInput.focus();
         }
 
