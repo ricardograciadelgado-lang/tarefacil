@@ -475,6 +475,29 @@
             color: #999;
         }
 
+        .api-config {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .config-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .config-box a {
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .config-box a:hover {
+            text-decoration: underline;
+        }
+
         .typing-indicator {
             display: flex;
             gap: 4px;
@@ -653,15 +676,41 @@
     <div class="modal" id="chatModal">
         <div class="modal-content" style="max-width: 900px; height: 85vh; display: flex; flex-direction: column;">
             <button class="close-btn" onclick="closeModal('chat')">×</button>
-            <h2 class="modal-title">💬 Chat con Claude AI</h2>
+            <h2 class="modal-title">💬 Chat con IA (Hugging Face)</h2>
             
             <div class="chat-container">
+                <div class="api-config" id="apiConfig">
+                    <div class="config-box">
+                        <p style="margin-bottom: 10px;">🔑 <strong>Configura tu API Key de Hugging Face (Gratis)</strong></p>
+                        <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;">
+                            1. Ve a <a href="https://huggingface.co/settings/tokens" target="_blank" style="color: #667eea;">huggingface.co/settings/tokens</a><br>
+                            2. Crea una cuenta gratis (si no tienes)<br>
+                            3. Genera un token de acceso<br>
+                            4. Pégalo aquí abajo:
+                        </p>
+                        <div style="display: flex; gap: 10px;">
+                            <input 
+                                type="password" 
+                                id="apiKeyInput" 
+                                placeholder="hf_xxxxxxxxxxxxxxxxxxxx"
+                                style="flex: 1; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 0.95rem;"
+                            >
+                            <button onclick="saveApiKey()" class="action-btn" style="width: auto; padding: 12px 30px;">
+                                Guardar
+                            </button>
+                        </div>
+                        <p style="font-size: 0.85rem; color: #999; margin-top: 10px;">
+                            ⚠️ Tu API key se guarda solo en tu navegador (localStorage)
+                        </p>
+                    </div>
+                </div>
+
                 <div class="chat-messages" id="chatMessages">
                     <div class="chat-message bot">
                         <div class="message-avatar">🤖</div>
                         <div class="message-content">
-                            <strong>Claude AI</strong>
-                            <p>¡Hola! Soy Claude, tu asistente de IA. Puedo ayudarte con:</p>
+                            <strong>IA Assistant</strong>
+                            <p>¡Hola! Soy tu asistente de IA powered by Hugging Face. Puedo ayudarte con:</p>
                             <ul>
                                 <li>📝 Redactar textos y documentos</li>
                                 <li>💡 Responder preguntas</li>
@@ -669,7 +718,7 @@
                                 <li>💻 Ayudarte con código</li>
                                 <li>🎨 Ideas creativas</li>
                             </ul>
-                            <p>¿En qué puedo ayudarte hoy?</p>
+                            <p>Configura tu API key arriba para comenzar. ¡Es completamente gratis!</p>
                         </div>
                     </div>
                 </div>
@@ -679,14 +728,15 @@
                         id="chatInput" 
                         placeholder="Escribe tu mensaje aquí... (Presiona Enter para enviar)"
                         rows="2"
+                        disabled
                     ></textarea>
-                    <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                    <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>
                         <span class="send-icon">▶</span>
                     </button>
                 </div>
                 
                 <div class="chat-info">
-                    <small>⚠️ Nota: Esta es una demo simulada. Para chatear con Claude real, necesitas una API key de Anthropic.</small>
+                    <small>🔒 100% Gratis • Tu API key nunca sale de tu navegador • Powered by Hugging Face</small>
                 </div>
             </div>
         </div>
@@ -1087,60 +1137,45 @@
         const chatMessages = document.getElementById('chatMessages');
         const chatInput = document.getElementById('chatInput');
         const sendBtn = document.getElementById('sendBtn');
+        const apiConfig = document.getElementById('apiConfig');
+        const apiKeyInput = document.getElementById('apiKeyInput');
 
-        // Respuestas inteligentes simuladas
-        const responses = {
-            saludos: [
-                "¡Hola! ¿Cómo puedo ayudarte hoy? 😊",
-                "¡Hola! Estoy aquí para ayudarte. ¿Qué necesitas?",
-                "¡Hey! ¿En qué puedo asistirte?"
-            ],
-            ayuda: [
-                "Puedo ayudarte con muchas cosas: redactar textos, responder preguntas, generar ideas, ayudarte con código, y más. ¿Qué necesitas específicamente?",
-                "Estoy aquí para ayudarte con tareas de escritura, análisis, programación, ideas creativas y mucho más. ¿Qué te gustaría hacer?"
-            ],
-            redactar: [
-                "¡Claro! Puedo ayudarte a redactar. ¿Qué tipo de texto necesitas? (email, carta, artículo, etc.)",
-                "Con gusto te ayudo a escribir. Cuéntame más sobre qué necesitas redactar."
-            ],
-            codigo: [
-                "¡Perfecto! Puedo ayudarte con código. ¿Qué lenguaje estás usando o qué necesitas programar?",
-                "Estoy listo para ayudarte con programación. ¿Qué necesitas crear o resolver?"
-            ],
-            herramientas: [
-                "¡Esta página tiene varias herramientas útiles!\n\n📑 Unir PDFs - Combina varios PDFs\n🖼️ Imágenes a PDF - Convierte imágenes\n📝 Unir Word - Combina documentos\n📊 Unir Excel - Une hojas de cálculo\n\n¿Cuál te gustaría usar?",
-                "Tenemos 4 herramientas principales aquí: unir PDFs, convertir imágenes a PDF, unir documentos Word y unir archivos Excel. ¿Necesitas ayuda con alguna?"
-            ],
-            despedida: [
-                "¡Hasta luego! Si necesitas algo más, aquí estaré. 👋",
-                "¡Adiós! Fue un placer ayudarte. 😊",
-                "¡Nos vemos! Vuelve cuando necesites ayuda. 🌟"
-            ],
-            default: [
-                "Interesante pregunta. Como esta es una demo, te recomendaría usar Claude real para respuestas más precisas. ¿Hay algo más sobre las herramientas de esta página en lo que pueda ayudarte?",
-                "Entiendo tu pregunta. Para respuestas más detalladas, necesitarías conectarte con la API de Claude. ¿Te gustaría saber más sobre las funciones de esta página?",
-                "Esa es una buena pregunta. Esta es una versión demo, pero puedo ayudarte con información sobre las herramientas disponibles aquí. ¿Qué te gustaría saber?"
-            ]
-        };
+        let conversationHistory = [];
+        let HF_API_KEY = null;
 
-        // Detectar intención del mensaje
-        function detectIntent(message) {
-            const msg = message.toLowerCase();
+        // Cargar API key guardada
+        window.addEventListener('load', () => {
+            const savedKey = localStorage.getItem('hf_api_key');
+            if (savedKey) {
+                HF_API_KEY = savedKey;
+                apiKeyInput.value = savedKey;
+                enableChat();
+            }
+        });
+
+        // Guardar API key
+        function saveApiKey() {
+            const key = apiKeyInput.value.trim();
+            if (!key) {
+                alert('Por favor ingresa una API key válida');
+                return;
+            }
+            if (!key.startsWith('hf_')) {
+                alert('La API key debe comenzar con "hf_"');
+                return;
+            }
+
+            HF_API_KEY = key;
+            localStorage.setItem('hf_api_key', key);
+            enableChat();
             
-            if (msg.match(/hola|hey|buenos|saludos|hi|hello/)) return 'saludos';
-            if (msg.match(/ayuda|ayudar|qué puedes|que puedes|funciones/)) return 'ayuda';
-            if (msg.match(/redactar|escribir|texto|carta|email|artículo/)) return 'redactar';
-            if (msg.match(/código|codigo|programar|script|javascript|python|html/)) return 'codigo';
-            if (msg.match(/herramienta|función|funcion|pdf|word|excel|imagen/)) return 'herramientas';
-            if (msg.match(/adiós|adios|chao|hasta luego|bye|gracias y|nos vemos/)) return 'despedida';
-            
-            return 'default';
+            addMessage('✅ API Key guardada correctamente. ¡Ya puedes chatear!', false);
         }
 
-        // Obtener respuesta aleatoria según intención
-        function getResponse(intent) {
-            const responseArray = responses[intent] || responses.default;
-            return responseArray[Math.floor(Math.random() * responseArray.length)];
+        function enableChat() {
+            apiConfig.style.display = 'none';
+            chatInput.disabled = false;
+            chatInput.focus();
         }
 
         // Agregar mensaje al chat
@@ -1151,7 +1186,7 @@
             messageDiv.innerHTML = `
                 <div class="message-avatar">${isUser ? '👤' : '🤖'}</div>
                 <div class="message-content">
-                    <strong>${isUser ? 'Tú' : 'Claude AI'}</strong>
+                    <strong>${isUser ? 'Tú' : 'IA Assistant'}</strong>
                     <p>${content.replace(/\n/g, '<br>')}</p>
                 </div>
             `;
@@ -1184,30 +1219,103 @@
             if (typing) typing.remove();
         }
 
+        // Llamar a la API de Hugging Face
+        async function callHuggingFaceAPI(message) {
+            try {
+                // Construir el prompt con historial
+                let prompt = '';
+                conversationHistory.forEach(msg => {
+                    prompt += `${msg.role === 'user' ? 'Usuario' : 'Asistente'}: ${msg.content}\n`;
+                });
+                prompt += `Usuario: ${message}\nAsistente:`;
+
+                const response = await fetch(
+                    'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2',
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${HF_API_KEY}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            inputs: prompt,
+                            parameters: {
+                                max_new_tokens: 500,
+                                temperature: 0.7,
+                                top_p: 0.95,
+                                return_full_text: false
+                            }
+                        })
+                    }
+                );
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        throw new Error('API key inválida. Por favor verifica tu token.');
+                    }
+                    throw new Error(`Error ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                let generatedText = data[0]?.generated_text || 'Lo siento, no pude generar una respuesta.';
+                
+                // Limpiar la respuesta
+                generatedText = generatedText.split('Usuario:')[0].trim();
+                generatedText = generatedText.split('Asistente:')[0].trim();
+                
+                return generatedText;
+
+            } catch (error) {
+                console.error('Error:', error);
+                if (error.message.includes('API key')) {
+                    localStorage.removeItem('hf_api_key');
+                    HF_API_KEY = null;
+                    apiConfig.style.display = 'block';
+                    chatInput.disabled = true;
+                    sendBtn.disabled = true;
+                    return '❌ API key inválida. Por favor configura una nueva.';
+                }
+                return `❌ Error: ${error.message}. Si el modelo está cargando, espera 20 segundos e intenta de nuevo.`;
+            }
+        }
+
         // Enviar mensaje
         async function sendMessage() {
             const message = chatInput.value.trim();
-            if (!message) return;
+            if (!message || !HF_API_KEY) return;
 
             // Agregar mensaje del usuario
             addMessage(message, true);
+            conversationHistory.push({ role: 'user', content: message });
+            
             chatInput.value = '';
             sendBtn.disabled = true;
+            chatInput.disabled = true;
 
             // Mostrar indicador de escritura
             showTypingIndicator();
 
-            // Simular delay de respuesta
-            setTimeout(() => {
-                removeTypingIndicator();
-                
-                const intent = detectIntent(message);
-                const response = getResponse(intent);
-                
-                addMessage(response, false);
-                sendBtn.disabled = false;
-                chatInput.focus();
-            }, 1000 + Math.random() * 1000);
+            // Llamar a la API
+            const response = await callHuggingFaceAPI(message);
+            
+            removeTypingIndicator();
+            addMessage(response, false);
+            
+            conversationHistory.push({ role: 'assistant', content: response });
+            
+            // Limitar historial a últimos 10 mensajes
+            if (conversationHistory.length > 10) {
+                conversationHistory = conversationHistory.slice(-10);
+            }
+
+            sendBtn.disabled = false;
+            chatInput.disabled = false;
+            chatInput.focus();
         }
 
         // Event listeners del chat
@@ -1219,7 +1327,7 @@
         });
 
         chatInput.addEventListener('input', () => {
-            sendBtn.disabled = !chatInput.value.trim();
+            sendBtn.disabled = !chatInput.value.trim() || !HF_API_KEY;
         });
 
         // ========== FUNCIONES AUXILIARES ==========
