@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tarefacil - Herramientas PDF</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pizzip/3.1.4/pizzip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.37.11/docxtemplater.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -357,6 +361,18 @@
                 <div class="tool-title">Imágenes a PDF</div>
                 <div class="tool-description">Convierte tus imágenes JPG, PNG o WEBP en documentos PDF profesionales</div>
             </div>
+
+            <div class="tool-card" onclick="openModal('word')">
+                <div class="tool-icon">📝</div>
+                <div class="tool-title">Unir Word</div>
+                <div class="tool-description">Combina múltiples documentos Word (.docx) en un solo archivo</div>
+            </div>
+
+            <div class="tool-card" onclick="openModal('excel')">
+                <div class="tool-icon">📊</div>
+                <div class="tool-title">Unir Excel</div>
+                <div class="tool-description">Une varias hojas de cálculo Excel (.xlsx) en un solo libro</div>
+            </div>
         </div>
     </div>
 
@@ -402,6 +418,48 @@
         </div>
     </div>
 
+    <!-- Modal Unir Word -->
+    <div class="modal" id="wordModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('word')">×</button>
+            <h2 class="modal-title">📝 Unir Documentos Word</h2>
+
+            <div class="upload-area" id="wordUploadArea">
+                <div class="upload-icon">📄</div>
+                <div class="upload-text">Arrastra tus archivos Word aquí</div>
+                <div class="upload-hint">.docx - o haz clic para seleccionar</div>
+                <input type="file" id="wordFileInput" accept=".docx" multiple>
+            </div>
+
+            <div class="file-list hidden" id="wordFileList"></div>
+
+            <button class="action-btn" id="wordBtn" disabled>Unir Word</button>
+            
+            <div class="status hidden" id="wordStatus"></div>
+        </div>
+    </div>
+
+    <!-- Modal Unir Excel -->
+    <div class="modal" id="excelModal">
+        <div class="modal-content">
+            <button class="close-btn" onclick="closeModal('excel')">×</button>
+            <h2 class="modal-title">📊 Unir Hojas Excel</h2>
+
+            <div class="upload-area" id="excelUploadArea">
+                <div class="upload-icon">📈</div>
+                <div class="upload-text">Arrastra tus archivos Excel aquí</div>
+                <div class="upload-hint">.xlsx - o haz clic para seleccionar</div>
+                <input type="file" id="excelFileInput" accept=".xlsx" multiple>
+            </div>
+
+            <div class="file-list hidden" id="excelFileList"></div>
+
+            <button class="action-btn" id="excelBtn" disabled>Unir Excel</button>
+            
+            <div class="status hidden" id="excelStatus"></div>
+        </div>
+    </div>
+
     <div class="footer">
         Hecho con ❤️ | Todas las operaciones se realizan en tu navegador - tus archivos permanecen privados
     </div>
@@ -412,6 +470,8 @@
         // Variables globales
         let mergeFiles = [];
         let convertFiles = [];
+        let wordFiles = [];
+        let excelFiles = [];
 
         // Elementos del DOM - Merge
         const mergeModal = document.getElementById('mergeModal');
@@ -429,12 +489,32 @@
         const convertBtn = document.getElementById('convertBtn');
         const convertStatus = document.getElementById('convertStatus');
 
+        // Elementos del DOM - Word
+        const wordModal = document.getElementById('wordModal');
+        const wordUploadArea = document.getElementById('wordUploadArea');
+        const wordFileInput = document.getElementById('wordFileInput');
+        const wordFileList = document.getElementById('wordFileList');
+        const wordBtn = document.getElementById('wordBtn');
+        const wordStatus = document.getElementById('wordStatus');
+
+        // Elementos del DOM - Excel
+        const excelModal = document.getElementById('excelModal');
+        const excelUploadArea = document.getElementById('excelUploadArea');
+        const excelFileInput = document.getElementById('excelFileInput');
+        const excelFileList = document.getElementById('excelFileList');
+        const excelBtn = document.getElementById('excelBtn');
+        const excelStatus = document.getElementById('excelStatus');
+
         // Funciones de Modal
         function openModal(type) {
             if (type === 'merge') {
                 mergeModal.classList.add('active');
             } else if (type === 'convert') {
                 convertModal.classList.add('active');
+            } else if (type === 'word') {
+                wordModal.classList.add('active');
+            } else if (type === 'excel') {
+                excelModal.classList.add('active');
             }
         }
 
@@ -449,6 +529,16 @@
                 convertFiles = [];
                 updateFileList('convert');
                 hideStatus('convert');
+            } else if (type === 'word') {
+                wordModal.classList.remove('active');
+                wordFiles = [];
+                updateFileList('word');
+                hideStatus('word');
+            } else if (type === 'excel') {
+                excelModal.classList.remove('active');
+                excelFiles = [];
+                updateFileList('excel');
+                hideStatus('excel');
             }
         }
 
@@ -458,6 +548,12 @@
         });
         convertModal.addEventListener('click', (e) => {
             if (e.target === convertModal) closeModal('convert');
+        });
+        wordModal.addEventListener('click', (e) => {
+            if (e.target === wordModal) closeModal('word');
+        });
+        excelModal.addEventListener('click', (e) => {
+            if (e.target === excelModal) closeModal('excel');
         });
 
         // ========== UNIR PDFs ==========
@@ -596,23 +692,199 @@
             }
         });
 
+        // ========== UNIR ARCHIVOS WORD ==========
+
+        wordUploadArea.addEventListener('click', () => wordFileInput.click());
+        wordUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            wordUploadArea.classList.add('dragover');
+        });
+        wordUploadArea.addEventListener('dragleave', () => {
+            wordUploadArea.classList.remove('dragover');
+        });
+        wordUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            wordUploadArea.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.docx'));
+            addFiles('word', files);
+        });
+        wordFileInput.addEventListener('change', (e) => {
+            addFiles('word', Array.from(e.target.files));
+        });
+
+        wordBtn.addEventListener('click', async () => {
+            if (wordFiles.length < 2) {
+                showStatus('word', 'Necesitas al menos 2 archivos Word', 'error');
+                return;
+            }
+
+            wordBtn.disabled = true;
+            showStatus('word', '⏳ Uniendo documentos Word...', 'loading');
+
+            try {
+                const zip = new JSZip();
+                let fullContent = '';
+                
+                for (let i = 0; i < wordFiles.length; i++) {
+                    const arrayBuffer = await wordFiles[i].arrayBuffer();
+                    const docZip = await JSZip.loadAsync(arrayBuffer);
+                    const contentXml = await docZip.file('word/document.xml').async('text');
+                    
+                    // Extraer el contenido del body
+                    const bodyMatch = contentXml.match(/<w:body>([\s\S]*?)<\/w:body>/);
+                    if (bodyMatch) {
+                        let bodyContent = bodyMatch[1];
+                        // Remover la última sección (sectPr) excepto del último documento
+                        if (i < wordFiles.length - 1) {
+                            bodyContent = bodyContent.replace(/<w:sectPr>[\s\S]*?<\/w:sectPr>/, '');
+                        }
+                        // Agregar salto de página entre documentos
+                        if (i > 0) {
+                            fullContent += '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+                        }
+                        fullContent += bodyContent;
+                    }
+                }
+
+                // Usar el primer documento como base
+                const baseArrayBuffer = await wordFiles[0].arrayBuffer();
+                const baseZip = await JSZip.loadAsync(baseArrayBuffer);
+                const baseContentXml = await baseZip.file('word/document.xml').async('text');
+                
+                // Reemplazar el body con el contenido combinado
+                const newContentXml = baseContentXml.replace(
+                    /<w:body>[\s\S]*?<\/w:body>/,
+                    `<w:body>${fullContent}</w:body>`
+                );
+                
+                baseZip.file('word/document.xml', newContentXml);
+                
+                const mergedBlob = await baseZip.generateAsync({ type: 'blob' });
+                downloadFile(mergedBlob, 'documento_word_unido.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+                
+                showStatus('word', '✅ ¡Documentos Word unidos correctamente!', 'success');
+                
+                setTimeout(() => {
+                    closeModal('word');
+                }, 2000);
+
+            } catch (error) {
+                showStatus('word', '❌ Error al unir los documentos Word', 'error');
+                console.error(error);
+            } finally {
+                wordBtn.disabled = false;
+            }
+        });
+
+        // ========== UNIR ARCHIVOS EXCEL ==========
+
+        excelUploadArea.addEventListener('click', () => excelFileInput.click());
+        excelUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            excelUploadArea.classList.add('dragover');
+        });
+        excelUploadArea.addEventListener('dragleave', () => {
+            excelUploadArea.classList.remove('dragover');
+        });
+        excelUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            excelUploadArea.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.xlsx'));
+            addFiles('excel', files);
+        });
+        excelFileInput.addEventListener('change', (e) => {
+            addFiles('excel', Array.from(e.target.files));
+        });
+
+        excelBtn.addEventListener('click', async () => {
+            if (excelFiles.length < 2) {
+                showStatus('excel', 'Necesitas al menos 2 archivos Excel', 'error');
+                return;
+            }
+
+            excelBtn.disabled = true;
+            showStatus('excel', '⏳ Uniendo hojas de Excel...', 'loading');
+
+            try {
+                const workbook = XLSX.utils.book_new();
+                
+                for (let i = 0; i < excelFiles.length; i++) {
+                    const arrayBuffer = await excelFiles[i].arrayBuffer();
+                    const wb = XLSX.read(arrayBuffer);
+                    
+                    // Copiar todas las hojas de cada archivo
+                    wb.SheetNames.forEach((sheetName, j) => {
+                        const worksheet = wb.Sheets[sheetName];
+                        // Crear nombre único para cada hoja
+                        let newSheetName = `${excelFiles[i].name.replace('.xlsx', '')}_${sheetName}`;
+                        // Limitar longitud del nombre (Excel tiene límite de 31 caracteres)
+                        if (newSheetName.length > 31) {
+                            newSheetName = newSheetName.substring(0, 28) + '...';
+                        }
+                        XLSX.utils.book_append_sheet(workbook, worksheet, newSheetName);
+                    });
+                }
+                
+                const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+                downloadFile(excelBuffer, 'libro_excel_unido.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                
+                showStatus('excel', '✅ ¡Archivos Excel unidos correctamente!', 'success');
+                
+                setTimeout(() => {
+                    closeModal('excel');
+                }, 2000);
+
+            } catch (error) {
+                showStatus('excel', '❌ Error al unir los archivos Excel', 'error');
+                console.error(error);
+            } finally {
+                excelBtn.disabled = false;
+            }
+        });
+
         // ========== FUNCIONES AUXILIARES ==========
 
         function addFiles(type, files) {
             if (type === 'merge') {
                 mergeFiles = [...mergeFiles, ...files];
                 mergeFileInput.value = '';
-            } else {
+            } else if (type === 'convert') {
                 convertFiles = [...convertFiles, ...files];
                 convertFileInput.value = '';
+            } else if (type === 'word') {
+                wordFiles = [...wordFiles, ...files];
+                wordFileInput.value = '';
+            } else if (type === 'excel') {
+                excelFiles = [...excelFiles, ...files];
+                excelFileInput.value = '';
             }
             updateFileList(type);
         }
 
         function updateFileList(type) {
-            const files = type === 'merge' ? mergeFiles : convertFiles;
-            const listElement = type === 'merge' ? mergeFileList : convertFileList;
-            const btn = type === 'merge' ? mergeBtn : convertBtn;
+            let files, listElement, btn, icon;
+            
+            if (type === 'merge') {
+                files = mergeFiles;
+                listElement = mergeFileList;
+                btn = mergeBtn;
+                icon = '📄';
+            } else if (type === 'convert') {
+                files = convertFiles;
+                listElement = convertFileList;
+                btn = convertBtn;
+                icon = '🖼️';
+            } else if (type === 'word') {
+                files = wordFiles;
+                listElement = wordFileList;
+                btn = wordBtn;
+                icon = '📝';
+            } else if (type === 'excel') {
+                files = excelFiles;
+                listElement = excelFileList;
+                btn = excelBtn;
+                icon = '📊';
+            }
 
             if (files.length === 0) {
                 listElement.classList.add('hidden');
@@ -626,7 +898,7 @@
             listElement.innerHTML = files.map((file, index) => `
                 <div class="file-item">
                     <div class="file-info">
-                        <span class="file-icon">${type === 'merge' ? '📄' : '🖼️'}</span>
+                        <span class="file-icon">${icon}</span>
                         <span class="file-name">${file.name}</span>
                     </div>
                     <button class="remove-btn" onclick="removeFile('${type}', ${index})">×</button>
@@ -637,21 +909,35 @@
         function removeFile(type, index) {
             if (type === 'merge') {
                 mergeFiles.splice(index, 1);
-            } else {
+            } else if (type === 'convert') {
                 convertFiles.splice(index, 1);
+            } else if (type === 'word') {
+                wordFiles.splice(index, 1);
+            } else if (type === 'excel') {
+                excelFiles.splice(index, 1);
             }
             updateFileList(type);
         }
 
         function showStatus(type, message, className) {
-            const statusElement = type === 'merge' ? mergeStatus : convertStatus;
+            let statusElement;
+            if (type === 'merge') statusElement = mergeStatus;
+            else if (type === 'convert') statusElement = convertStatus;
+            else if (type === 'word') statusElement = wordStatus;
+            else if (type === 'excel') statusElement = excelStatus;
+            
             statusElement.textContent = message;
             statusElement.className = 'status ' + className;
             statusElement.classList.remove('hidden');
         }
 
         function hideStatus(type) {
-            const statusElement = type === 'merge' ? mergeStatus : convertStatus;
+            let statusElement;
+            if (type === 'merge') statusElement = mergeStatus;
+            else if (type === 'convert') statusElement = convertStatus;
+            else if (type === 'word') statusElement = wordStatus;
+            else if (type === 'excel') statusElement = excelStatus;
+            
             statusElement.classList.add('hidden');
         }
 
