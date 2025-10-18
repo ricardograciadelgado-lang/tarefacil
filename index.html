@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tarefacil - Unir PDFs</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #fafafa;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            margin-top: 60px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            text-align: center;
+            margin-bottom: 10px;
+            letter-spacing: -1px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 0.95rem;
+            margin-bottom: 50px;
+            font-weight: 300;
+        }
+
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 60px 40px;
+            text-align: center;
+            background: white;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #333;
+            background: #fefefe;
+        }
+
+        .upload-area.dragover {
+            border-color: #333;
+            background: #f5f5f5;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.3;
+        }
+
+        .upload-text {
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            font-size: 0.85rem;
+            color: #999;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-list {
+            margin-top: 30px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .file-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-name {
+            font-size: 0.9rem;
+            color: #333;
+        }
+
+        .remove-btn {
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 5px;
+            transition: color 0.2s;
+        }
+
+        .remove-btn:hover {
+            color: #333;
+        }
+
+        .merge-btn {
+            width: 100%;
+            padding: 16px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 30px;
+            transition: background 0.3s ease;
+            font-weight: 400;
+        }
+
+        .merge-btn:hover:not(:disabled) {
+            background: #000;
+        }
+
+        .merge-btn:disabled {
+            background: #ddd;
+            cursor: not-allowed;
+            color: #999;
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>tarefacil</h1>
+        <p class="subtitle">Une tus archivos PDF de forma simple</p>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📄</div>
+            <div class="upload-text">Arrastra tus PDFs aquí</div>
+            <div class="upload-hint">o haz clic para seleccionar</div>
+            <input type="file" id="fileInput" accept=".pdf" multiple>
+        </div>
+
+        <div class="file-list hidden" id="fileList"></div>
+
+        <button class="merge-btn" id="mergeBtn" disabled>Unir PDFs</button>
+        
+        <div class="status hidden" id="status"></div>
+    </div>
+
+    <script>
+        const { PDFDocument } = PDFLib;
+        
+        let selectedFiles = [];
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const mergeBtn = document.getElementById('mergeBtn');
+        const status = document.getElementById('status');
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = Array.from(e.dataTransfer.files).filter(f => f.type === 'application/pdf');
+            addFiles(files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            addFiles(Array.from(e.target.files));
+        });
+
+        function addFiles(files) {
+            selectedFiles = [...selectedFiles, ...files];
+            updateFileList();
+            fileInput.value = '';
+        }
+
+        function updateFileList() {
+            if (selectedFiles.length === 0) {
+                fileList.classList.add('hidden');
+                mergeBtn.disabled = true;
+                return;
+            }
+
+            fileList.classList.remove('hidden');
+            mergeBtn.disabled = false;
+
+            fileList.innerHTML = selectedFiles.map((file, index) => `
+                <div class="file-item">
+                    <span class="file-name">${file.name}</span>
+                    <button class="remove-btn" onclick="removeFile(${index})">×</button>
+                </div>
+            `).join('');
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            updateFileList();
+        }
+
+        mergeBtn.addEventListener('click', async () => {
+            if (selectedFiles.length < 2) {
+                showStatus('Necesitas al menos 2 archivos PDF');
+                return;
+            }
+
+            mergeBtn.disabled = true;
+            showStatus('Uniendo PDFs...');
+
+            try {
+                const mergedPdf = await PDFDocument.create();
+
+                for (const file of selectedFiles) {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdf = await PDFDocument.load(arrayBuffer);
+                    const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+                    copiedPages.forEach((page) => mergedPdf.addPage(page));
+                }
+
+                const mergedPdfBytes = await mergedPdf.save();
+                const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'documento_unido.pdf';
+                a.click();
+                
+                URL.revokeObjectURL(url);
+                showStatus('¡PDF unido correctamente!');
+                
+                setTimeout(() => {
+                    selectedFiles = [];
+                    updateFileList();
+                    hideStatus();
+                }, 2000);
+
+            } catch (error) {
+                showStatus('Error al unir los PDFs');
+                console.error(error);
+            } finally {
+                mergeBtn.disabled = false;
+            }
+        });
+
+        function showStatus(message) {
+            status.textContent = message;
+            status.classList.remove('hidden');
+        }
+
+        function hideStatus() {
+            status.classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
