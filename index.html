@@ -787,6 +787,14 @@
         const excelBtn = document.getElementById('excelBtn');
         const excelStatus = document.getElementById('excelStatus');
 
+        // Elementos del DOM - Chat
+        const chatModal = document.getElementById('chatModal');
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const apiConfig = document.getElementById('apiConfig');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+
         // Funciones de Modal
         function openModal(type) {
             if (type === 'merge') {
@@ -1133,27 +1141,26 @@
 
         // ========== CHAT CON IA ==========
 
-        const chatModal = document.getElementById('chatModal');
-        const chatMessages = document.getElementById('chatMessages');
-        const chatInput = document.getElementById('chatInput');
-        const sendBtn = document.getElementById('sendBtn');
-        const apiConfig = document.getElementById('apiConfig');
-        const apiKeyInput = document.getElementById('apiKeyInput');
-
         let conversationHistory = [];
         let HF_API_KEY = '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'; // Token pre-configurado
 
         // Cargar API key guardada
         window.addEventListener('load', () => {
             // Ya tenemos el token, así que habilitamos el chat automáticamente
-            if (HF_API_KEY) {
-                enableChat();
-                // Ocultar la configuración de API
-                if (apiConfig) {
-                    apiConfig.style.display = 'none';
-                }
+            if (HF_API_KEY && apiConfig) {
+                enableChatInterface();
             }
         });
+
+        function enableChatInterface() {
+            if (apiConfig) {
+                apiConfig.style.display = 'none';
+            }
+            if (chatInput) {
+                chatInput.disabled = false;
+                chatInput.placeholder = 'Escribe tu mensaje aquí... (Presiona Enter para enviar)';
+            }
+        }
 
         // Guardar API key
         function saveApiKey() {
@@ -1169,22 +1176,15 @@
 
             HF_API_KEY = key;
             localStorage.setItem('hf_api_key', key);
-            enableChat();
+            enableChatInterface();
             
-            addMessage('✅ API Key guardada correctamente. ¡Ya puedes chatear!', false);
-        }
-
-        function enableChat() {
-            if (apiConfig) {
-                apiConfig.style.display = 'none';
-            }
-            chatInput.disabled = false;
-            chatInput.placeholder = 'Escribe tu mensaje aquí... (Presiona Enter para enviar)';
-            chatInput.focus();
+            addChatMessage('✅ API Key guardada correctamente. ¡Ya puedes chatear!', false);
         }
 
         // Agregar mensaje al chat
-        function addMessage(content, isUser = false) {
+        function addChatMessage(content, isUser = false) {
+            if (!chatMessages) return;
+            
             const messageDiv = document.createElement('div');
             messageDiv.className = `chat-message ${isUser ? 'user' : 'bot'}`;
             
@@ -1202,6 +1202,8 @@
 
         // Mostrar indicador de escritura
         function showTypingIndicator() {
+            if (!chatMessages) return;
+            
             const typingDiv = document.createElement('div');
             typingDiv.className = 'chat-message bot';
             typingDiv.id = 'typingIndicator';
@@ -1291,15 +1293,17 @@
 
         // Enviar mensaje
         async function sendMessage() {
+            if (!chatInput || !chatMessages) return;
+            
             const message = chatInput.value.trim();
             if (!message || !HF_API_KEY) return;
 
             // Agregar mensaje del usuario
-            addMessage(message, true);
+            addChatMessage(message, true);
             conversationHistory.push({ role: 'user', content: message });
             
             chatInput.value = '';
-            sendBtn.disabled = true;
+            if (sendBtn) sendBtn.disabled = true;
             chatInput.disabled = true;
 
             // Mostrar indicador de escritura
@@ -1309,7 +1313,7 @@
             const response = await callHuggingFaceAPI(message);
             
             removeTypingIndicator();
-            addMessage(response, false);
+            addChatMessage(response, false);
             
             conversationHistory.push({ role: 'assistant', content: response });
             
@@ -1318,22 +1322,26 @@
                 conversationHistory = conversationHistory.slice(-10);
             }
 
-            sendBtn.disabled = false;
+            if (sendBtn) sendBtn.disabled = false;
             chatInput.disabled = false;
             chatInput.focus();
         }
 
         // Event listeners del chat
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
+        if (chatInput) {
+            chatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
 
-        chatInput.addEventListener('input', () => {
-            sendBtn.disabled = !chatInput.value.trim() || !HF_API_KEY;
-        });
+            chatInput.addEventListener('input', () => {
+                if (sendBtn) {
+                    sendBtn.disabled = !chatInput.value.trim() || !HF_API_KEY;
+                }
+            });
+        }
 
         // ========== FUNCIONES AUXILIARES ==========
 
